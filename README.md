@@ -1,1 +1,2 @@
-# Promise_IndexedDB
+# Promise IndexedDB
+Promise version of IndexedDB
