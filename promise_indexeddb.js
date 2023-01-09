@@ -24,7 +24,7 @@ class PromiseIndexedDB {
 
 			request.onupgradeneeded = () => {
 				let db = request.result
-				db.createObjectStore(db_name, {keyPath: 'id', autoIncrement: 'true'})
+				db.createObjectStore(store_name, {keyPath: 'id', autoIncrement: 'true'})
 				db.close()
 			}
 
