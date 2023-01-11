@@ -4,7 +4,7 @@ class Connection {
 		this.transaction = transaction 
 		this.store = store 
 	}
-	clean(callback = () => {}) { 
+	close(callback = () => {}) { 
 		this.transaction.oncomplete = () => {
 			callback()
 			this.db.close()
@@ -13,9 +13,10 @@ class Connection {
 }
 
 class PromiseIndexedDB {
-	constructor(db_name, version = 1) {
+	constructor(db_name, version = 1, schema = {keyPath: 'id', autoIncrement: 'true'}) {
 		this.db_name = db_name 
 		this.version = version
+		this.schema = schema
 	}
 
 	connect(store_name, mode = 'readonly') {
@@ -24,7 +25,7 @@ class PromiseIndexedDB {
 
 			request.onupgradeneeded = () => {
 				let db = request.result
-				db.createObjectStore(store_name, {keyPath: 'id', autoIncrement: 'true'})
+				db.createObjectStore(store_name, this.schema)
 				db.close()
 			}
 
@@ -58,7 +59,7 @@ class PromiseIndexedDB {
 				}
 			};
 
-			connection.clean(() =>  resolve(data_list) )
+			connection.close(() =>  resolve(data_list) )
 		})
 	}
 
@@ -70,7 +71,7 @@ class PromiseIndexedDB {
 				connection.store.put(value)
 			}
 
-			connection.clean(() => resolve())
+			connection.close(() => resolve())
 		})
 	}
 
@@ -83,7 +84,7 @@ class PromiseIndexedDB {
 				query.onsuccess = (event) => console.log(event)
 			}
 
-			connection.clean(() => resolve() )
+			connection.close(() => resolve() )
 		})
 	}
 }
