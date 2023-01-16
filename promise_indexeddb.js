@@ -13,37 +13,55 @@ class Connection {
 }
 
 class PromiseIndexedDB {
-	constructor(db_name, version = 1, schema = {keyPath: 'id', autoIncrement: 'true'}) {
+	constructor(db_name, schema , version = 1, )
+	{
 		this.db_name = db_name 
 		this.version = version
 		this.schema = schema
+
+		let request = indexedDB.open(this.db_name, this.version)
+		request.onupgradeneeded = () => {
+			let db = request.result
+			for(let store_info of schema) {
+				db.createObjectStore(store_info.store_name, 
+									store_info.store_options)
+			}
+			db.close()
+		}
 	}
 
-	connect(store_name, mode = 'readonly') {
+	open_db(store_name, mode = 'readonly') {
 		return new Promise((resolve, reject) => {
 			let request = indexedDB.open(this.db_name, this.version)
 
-			request.onupgradeneeded = () => {
-				let db = request.result
-				db.createObjectStore(store_name, this.schema)
-				db.close()
-			}
-
 			request.onsuccess = () => {
 				let db = request.result 
-				if(!db.objectStoreNames.contains(store_name)) {
-					db.close()
-					return Promise.reject(`Store ${store_name} not existed`) 
-				}
-
 				let transaction = db.transaction(store_name, mode)
 				let store = transaction.objectStore(store_name)
 				resolve(new Connection(db, transaction, store))
 			}
 
-			request.onerror = () => reject()
+			request.onerror = () => {
+				reject('CONNECTION_FAILED')
+			}
 		})
-	} 
+	}
+
+	async connect(store_name, mode = 'readonly') {
+		return new Promise((resolve, reject) => {
+			this.open_db(store_name, mode)
+				.then(connection => {
+					console.log('Opened database successfully')
+					resolve(connection)
+				})
+				.catch(err => {
+					console.log('Opened database failed! Try again...')
+					resolve(this.open_db(store_name, mode))
+				})
+
+		})
+		
+	}
 
 	async read_data(store_name) { 
 		let connection = await this.connect(store_name)
@@ -71,20 +89,26 @@ class PromiseIndexedDB {
 				connection.store.put(value)
 			}
 
-			connection.close(() => resolve())
+			connection.close(() => {
+				console.log('Updated database successfully')
+				resolve()
+			})
 		})
 	}
 
 	async delete_data(id_list, store_name) { 
 		let connection = await this.connect(store_name, 'readwrite')
-		console.log('Delete ', id_list)
+
 		return new Promise((resolve, reject) => {
 			for(let id of id_list) {
 				let query = connection.store.delete(id)
 				query.onsuccess = (event) => console.log(event)
 			}
 
-			connection.close(() => resolve() )
+			connection.close(() => {
+				console.log('Delete data from database successfully')
+				resolve()
+			})
 		})
 	}
 }
